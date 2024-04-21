@@ -30,6 +30,15 @@ const std::array<std::array<std::string, 16>, 16> S_BOX = {
         }
 };
 
+const std::array<std::array<int, 4>, 4> PRE_DEFINED_MATRIX = {
+        {
+            {2, 3, 1, 1},
+            {1, 2, 3, 1},
+            {1, 1, 2, 3},
+            {3, 1, 1, 2}
+        }
+};
+
 class Encryption
 {
 public:
@@ -37,15 +46,16 @@ public:
 string input_string;
 
 int PT_MATRIX_INT[4][4];
+string PT_MATRIX_HEX[4][4];
 
-string PT_MATRIX_HEX[4][4]; // Plain Text Matrix
-string STATE_ARRAY[4][4];
+string STATE_ARRAY_SUB_BYTES[4][4];
+string STATE_ARRAY_SHIFT_ROWS[4][4];
 
 Encryption() {}
 
-Encryption(string ipStr)
+Encryption(string ip_str)
 {
-    this->input_string = ipStr;
+    this->input_string = ip_str;
 }
 
 void createPlainMatrix()
@@ -105,8 +115,24 @@ void subBytes()
             ss << S_BOX[row_index][col_index];
             string sub_byte_hex = ss.str();
 
-            STATE_ARRAY[i][j] = sub_byte_hex;
+            STATE_ARRAY_SUB_BYTES[i][j] = sub_byte_hex;
             cout << " | " << S_BOX[row_index][col_index];
+        }
+        cout << " |" << endl;
+    }
+}
+
+void shiftRows()
+{
+    cout << "--------- SHIFT ROWS ---------" << endl;
+
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            STATE_ARRAY_SHIFT_ROWS[i][j] = STATE_ARRAY_SUB_BYTES[i][(j + i) % 4];
+
+            cout << " | " << STATE_ARRAY_SHIFT_ROWS[i][j];
         }
         cout << " |" << endl;
     }
@@ -132,6 +158,7 @@ int main()
     Encryption AES("muhammadhabibkha");
     AES.createPlainMatrix();
     AES.subBytes();
+    AES.shiftRows();
 
     return 0;
 }
