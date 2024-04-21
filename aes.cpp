@@ -50,6 +50,7 @@ string PT_MATRIX_HEX[4][4];
 
 string STATE_ARRAY_SUB_BYTES[4][4];
 string STATE_ARRAY_SHIFT_ROWS[4][4];
+string STATE_ARRAY_MIX_COLUMN[4][4];
 
 Encryption() {}
 
@@ -75,22 +76,30 @@ void createPlainMatrix()
                 string binary_string_8bit = bitset<8>(ascii_value).to_string();
 
                 // convert binary into integer
-                int int_value = std::stoi(binary_string_8bit, nullptr, 2);
-                PT_MATRIX_INT[i][j] = int_value;
+                int int_value = stoi(binary_string_8bit, nullptr, 2);
+                PT_MATRIX_INT[j][i] = int_value; // input stored column-wise in AES / Block Ciphers
 
                 // Convert integer to hexadecimal string
                 stringstream ss;
                 ss << hex << int_value; // set hex as format for string stream before inserting
                 string hex_string = ss.str(); //extract contents from stream as string
                 
-                PT_MATRIX_HEX[i][j] = hex_string;
-                cout << " | " << hex_string;
+                PT_MATRIX_HEX[j][i] = hex_string;
             }
             else
             {
                 cout << "Error: Input String out of bounds" << endl;
                 return;
             }
+        }
+    }
+    // print column-wise
+    
+    for (int i=0; i<4; i++)
+    {
+        for (int j=0l; j<4; j++)
+        {
+            cout << " | " << PT_MATRIX_HEX[i][j];
         }
         cout << " |" << endl;
     }
@@ -138,6 +147,47 @@ void shiftRows()
     }
 }
 
+void mixColumn()
+{
+    cout << "--------- MIX COLUMN ---------" << endl;
+
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            int gf_xor = 0;
+
+            for (int k = 0; k < 4; k++)
+            {
+                int pre_defined_matrix_int = PRE_DEFINED_MATRIX[i][k];
+                int state_array_int = stoi(STATE_ARRAY_SHIFT_ROWS[k][j], nullptr, 16);
+
+                int gf_mul = galois_single_multiply(pre_defined_matrix_int, state_array_int, 8);
+
+                if (k != 0)
+                {
+                    int temp = gf_xor ^ gf_mul; // xor second value with first stored in variable
+                    gf_xor = temp; // replace with newer value
+                }
+                else 
+                {
+                    gf_xor = gf_mul; // first only store value
+                }
+            }
+            int decimal_xor = bitset<8>(gf_xor).to_ulong();
+            
+            stringstream ss;
+            ss << hex << decimal_xor;
+            string hex_xor = ss.str();
+
+            STATE_ARRAY_MIX_COLUMN[i][j] = hex_xor;
+            
+            cout << " | " << STATE_ARRAY_MIX_COLUMN[i][j];
+        }
+        cout << " |" << endl;
+    }
+}
+
 
 
 
@@ -146,19 +196,11 @@ void shiftRows()
 
 int main()
 {
-    // unsigned int x, y;
-    // x = 150;
-    // y = 158;
-
-    // // unsigned int z = galois_single_multiply(x, y, 8);
-    // unsigned int z = galois_single_divide(45, 34, 8);
-
-    // cout << z << endl;
-
     Encryption AES("muhammadhabibkha");
     AES.createPlainMatrix();
     AES.subBytes();
     AES.shiftRows();
+    AES.mixColumn();
 
     return 0;
 }
