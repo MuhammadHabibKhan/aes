@@ -194,7 +194,6 @@ string gFunction(string word, int round)
     return w_dash;
 }
 
-
 };
 
 
@@ -347,13 +346,70 @@ void mixColumn()
 
 };
 
+
+class AES
+{
+public: 
+
+string input_text;
+vector <string> INPUT_16_BYTES_ARRAY;
+
+AES() {}
+
+AES(string text)
+{
+    this->input_text = text;
+}
+
+void makeInputPackets()
+{
+    string temp_string;
+
+    for (int j = 0; j < input_text.length(); j++)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            if (i < input_text.length())
+            {
+                temp_string += input_text[j++];
+            }
+            else
+            {
+                temp_string += '\0';
+            }
+        }
+        INPUT_16_BYTES_ARRAY.push_back(temp_string);
+    }
+}
+
+void algorithm()
+{
+    for (int i = 0; i < INPUT_16_BYTES_ARRAY.size(); i++)
+    {
+        cout << INPUT_16_BYTES_ARRAY[i] << endl;
+
+        Encryption Encrypt(INPUT_16_BYTES_ARRAY[i]);
+
+        Encrypt.createPlainMatrix();
+        Encrypt.subBytes();
+        Encrypt.shiftRows();
+        Encrypt.mixColumn();
+    }
+}
+
+};
+
+
 int main()
 {
-    Encryption AES("muhammadhabibkha");
-    AES.createPlainMatrix();
-    AES.subBytes();
-    AES.shiftRows();
-    AES.mixColumn();
+    // Encryption AES("muhammadhabibkha");
+    // AES.createPlainMatrix();
+    // AES.subBytes();
+    // AES.shiftRows();
+    // AES.mixColumn();
+
+    AES Cipher("muhammadhabibkha");
+    Cipher.algorithm();
 
     return 0;
 }
