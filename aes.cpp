@@ -363,10 +363,10 @@ AES(string text)
 
 void makeInputPackets()
 {
-    string temp_string;
-
     for (int j = 0; j < input_text.length(); j++)
     {
+        string temp_string;
+        
         for (int i = 0; i < 16; i++)
         {
             if (i < input_text.length())
@@ -384,10 +384,10 @@ void makeInputPackets()
 
 void algorithm()
 {
+    makeInputPackets();
+
     for (int i = 0; i < INPUT_16_BYTES_ARRAY.size(); i++)
     {
-        cout << INPUT_16_BYTES_ARRAY[i] << endl;
-
         Encryption Encrypt(INPUT_16_BYTES_ARRAY[i]);
 
         Encrypt.createPlainMatrix();
