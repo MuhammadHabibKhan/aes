@@ -9,7 +9,16 @@
 
 using namespace std;
 
-const std::array<std::array<std::string, 16>, 16> S_BOX = {
+vector <array<array<string, 4>, 4>> KEY_POOL; // in binary
+
+const vector <string> ROUND_CONSTANT(
+    {
+        "01000000", "02000000", "04000000", "08000000", "10000000", 
+        "20000000", "40000000", "80000000", "1B000000", "36000000"
+    }
+);
+
+const array<array<string, 16>, 16> S_BOX = {
         {
             {"63", "7c", "77", "7b", "f2", "6b", "6f", "c5", "30", "01", "67", "2b", "fe", "d7", "ab", "76"},
             {"ca", "82", "c9", "7d", "fa", "59", "47", "f0", "ad", "d4", "a2", "af", "9c", "a4", "72", "c0"},
@@ -30,7 +39,7 @@ const std::array<std::array<std::string, 16>, 16> S_BOX = {
         }
 };
 
-const std::array<std::array<int, 4>, 4> PRE_DEFINED_MATRIX = {
+const array<array<int, 4>, 4> PRE_DEFINED_MATRIX = {
         {
             {2, 3, 1, 1},
             {1, 2, 3, 1},
@@ -38,6 +47,156 @@ const std::array<std::array<int, 4>, 4> PRE_DEFINED_MATRIX = {
             {3, 1, 1, 2}
         }
 };
+
+class KeyExpansion
+{
+
+public: string key;
+
+KeyExpansion() {}
+
+KeyExpansion(string k)
+{
+    this->key = k;
+}
+
+void InitialRoundKey()
+{
+    // To be XORed with Plain Text Matrix before any encryption begins
+
+    int index = 0;
+
+    for (int i = 0; i < 4; i++)
+    {
+        array<array<string, 4>, 4> KEY_MATRIX;
+
+        for (int j = 0; j < 4; j++)
+        {
+            if (index < key.length())
+            {
+                char key_char = key[index++];
+                int ascii_value = static_cast<int>(key_char);
+
+                string binary_string_8bit = bitset<8>(ascii_value).to_string();
+                KEY_MATRIX[j][i] = binary_string_8bit; // binary of key char stored column-wise                
+            }
+            else
+            {
+                cout << "Error: Key out of bounds" << endl;
+                return;
+            }
+        }
+        KEY_POOL.push_back(KEY_MATRIX);
+    }
+}
+
+void expandKey()
+{
+    // create word array and w'
+
+    for (int k = 1; k < 11; k++) // 11 round keys for 128-bit
+    {
+        array<string, 4> WORD_ARRAY;
+        array<string, 4> WORD_ARRAY_OUTPUT;
+        array<array<string, 4>, 4> KEY_MATRIX;
+
+        for (int i = 0; i < 4; i++)
+        {
+            string word;
+
+            for (int j = 0; j < 4; j++)
+            {
+                word += KEY_POOL[k - 1][j][i];
+            }
+            WORD_ARRAY[i] = word;
+        }
+        string w_dash = gFunction(WORD_ARRAY[4], k); // w' calculated using the last word
+
+        // generate new word array
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i = 0)
+            {
+                int first_value = stoi(WORD_ARRAY[i], nullptr, 2);
+                int w_dash_int =  stoi(w_dash, nullptr, 2); // for first word, use w' as second value
+
+                int xor_result = first_value ^ w_dash_int;
+                WORD_ARRAY_OUTPUT[i] = bitset<8>(xor_result).to_string();
+
+            }
+            else
+            {
+                int first_value = stoi(WORD_ARRAY[i], nullptr, 2);
+                int second_value =  stoi(WORD_ARRAY_OUTPUT[i-1], nullptr, 2); // use previous new word as second value
+
+                int xor_result = first_value ^ second_value;
+                WORD_ARRAY_OUTPUT[i] = bitset<8>(xor_result).to_string();
+            }
+        }
+        // convert word array into 4x4 byte matrix to append into KEY POOL
+
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                KEY_MATRIX[j][i] = WORD_ARRAY_OUTPUT[i].substr(j * 8, 8);
+            }
+        }
+        KEY_POOL.push_back(KEY_MATRIX);
+    }
+}
+
+string gFunction(string word, int round)
+{
+    array<string, 4> BYTE_ARRAY;
+    array<string, 4> BYTE_ARRAY_SHIFT;
+    array<string, 4> BYTE_ARRAY_SUB;
+
+    string w_dash;
+
+    for (int i=0; i < 4; i++)
+    {
+        BYTE_ARRAY[i] =  word.substr(i * 8, 8);
+    }
+
+    // 1) One byte circular left shift
+
+    for (int i = 0; i < 4; i++)
+    {
+        BYTE_ARRAY_SHIFT[i] = BYTE_ARRAY[(i - 1) % 4];
+    }
+
+    // 2) S_BOX substitution
+    
+    for (int i = 0; i < 4; i++)
+    {
+        string first_4_bits = BYTE_ARRAY_SHIFT[i].substr(0, 4);
+        string last_4_bits = BYTE_ARRAY_SHIFT[i].substr(4, 4);
+
+        int row_index = stoi(first_4_bits, nullptr, 2);
+        int col_index = stoi(last_4_bits, nullptr, 2);
+
+        int decimal_value = stoi(S_BOX[row_index][col_index], nullptr, 16); // hex to decimal
+        BYTE_ARRAY_SUB[i] = bitset<8>(decimal_value).to_string(); // decimal to binary
+    }
+
+    // 3) XORing with Round Constant
+
+    for (int i = 0; i < 4; i++)
+    {
+        int sub_word = stoi(BYTE_ARRAY_SUB[i], nullptr, 2);
+        int round_const = stoi(ROUND_CONSTANT[round], nullptr, 16); // round constant originally in hex base 16
+
+        int xor_result = sub_word ^ round_const; // xor 8-bit sections of the word with round constant
+        w_dash += bitset<32>(xor_result).to_string(); // append the xored bits in binary to w_dash
+    }
+    return w_dash;
+}
+
+
+};
+
 
 class Encryption
 {
@@ -160,7 +319,7 @@ void mixColumn()
             for (int k = 0; k < 4; k++)
             {
                 int pre_defined_matrix_int = PRE_DEFINED_MATRIX[i][k];
-                int state_array_int = stoi(STATE_ARRAY_SHIFT_ROWS[k][j], nullptr, 16);
+                int state_array_int = stoi(STATE_ARRAY_SHIFT_ROWS[k][j], nullptr, 16); // hex to decimal
 
                 int gf_mul = galois_single_multiply(pre_defined_matrix_int, state_array_int, 8);
 
@@ -173,11 +332,9 @@ void mixColumn()
                 {
                     gf_xor = gf_mul; // first only store value
                 }
-            }
-            int decimal_xor = bitset<8>(gf_xor).to_ulong();
-            
+            }            
             stringstream ss;
-            ss << hex << decimal_xor;
+            ss << hex << gf_xor;
             string hex_xor = ss.str();
 
             STATE_ARRAY_MIX_COLUMN[i][j] = hex_xor;
@@ -188,11 +345,7 @@ void mixColumn()
     }
 }
 
-
-
-
 };
-
 
 int main()
 {
