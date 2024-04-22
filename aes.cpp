@@ -246,16 +246,22 @@ void createPlainMatrix()
             }
             else
             {
-                cout << "Error: Input String out of bounds" << endl;
-                return;
+                cout << "Adding Padding Bits" << endl;
+                // PKCS#7 Padding => amount of bytes needed for padding are added as padding
+                int padding_value = 16 - input_string.length();
+                PT_MATRIX_INT[j][i] = padding_value;
+
+                stringstream pv;
+                pv << hex << padding_value;
+                string padding_value_hex = pv.str();
+                PT_MATRIX_HEX[j][i] = padding_value_hex;
             }
-        }
+        }    
     }
-    // print column-wise
-    
+    // print 
     for (int i=0; i<4; i++)
     {
-        for (int j=0l; j<4; j++)
+        for (int j=0; j<4; j++)
         {
             cout << " | " << PT_MATRIX_HEX[i][j];
         }
@@ -276,7 +282,18 @@ void subBytes()
             string second_char(1, plain_char_hex[1]);
 
             int row_index = stoi(first_char, nullptr, 16);
-            int col_index = stoi(second_char, nullptr, 16);
+            int col_index;
+
+            try
+            {
+                col_index = stoi(second_char, nullptr, 16); // if fails then single digit hex
+            }
+            catch(const exception& e)
+            {
+                // swap col and row as first digit is 0 if none present 
+                col_index = row_index;
+                row_index = 0;
+            }
 
             stringstream ss;
             ss << S_BOX[row_index][col_index];
@@ -363,19 +380,19 @@ AES(string text)
 
 void makeInputPackets()
 {
-    for (int j = 0; j < input_text.length(); j++)
+    // padding bits added in createPlainMatrix()
+
+    int index = 0;
+
+    while (index < input_text.length())
     {
         string temp_string;
-        
+
         for (int i = 0; i < 16; i++)
         {
-            if (i < input_text.length())
+            if (index < input_text.length())
             {
-                temp_string += input_text[j++];
-            }
-            else
-            {
-                temp_string += '\0';
+                temp_string += input_text[index++];
             }
         }
         INPUT_16_BYTES_ARRAY.push_back(temp_string);
@@ -388,8 +405,9 @@ void algorithm()
 
     for (int i = 0; i < INPUT_16_BYTES_ARRAY.size(); i++)
     {
-        Encryption Encrypt(INPUT_16_BYTES_ARRAY[i]);
+        cout << "\n16 byte input: " << INPUT_16_BYTES_ARRAY[i] << endl;
 
+        Encryption Encrypt(INPUT_16_BYTES_ARRAY[i]);
         Encrypt.createPlainMatrix();
         Encrypt.subBytes();
         Encrypt.shiftRows();
@@ -402,13 +420,7 @@ void algorithm()
 
 int main()
 {
-    // Encryption AES("muhammadhabibkha");
-    // AES.createPlainMatrix();
-    // AES.subBytes();
-    // AES.shiftRows();
-    // AES.mixColumn();
-
-    AES Cipher("muhammadhabibkha");
+    AES Cipher("muhammadhabibkhamuhammad");
     Cipher.algorithm();
 
     return 0;
