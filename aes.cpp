@@ -48,6 +48,24 @@ const array<array<int, 4>, 4> PRE_DEFINED_MATRIX = {
         }
 };
 
+string binaryXOR(const string& a, const string& b) {
+
+    // Ensure both strings have the same length
+    if (a.length() != b.length()) {
+        std::cerr << "Binary strings must have the same length." << std::endl;
+        return "";
+    }
+    // Initialize result string
+    string result = "";
+
+    // Perform XOR operation on corresponding bits
+    for (size_t i = 0; i < a.length(); ++i) {
+        // XOR operation: '0' XOR '0' = '0', '1' XOR '0' = '1', '0' XOR '1' = '1', '1' XOR '1' = '0'
+        result += (a[i] == b[i]) ? '0' : '1';
+    }
+    return result;
+}
+
 class KeyExpansion
 {
 
@@ -65,11 +83,10 @@ void InitialRoundKey()
     // To be XORed with Plain Text Matrix before any encryption begins
 
     int index = 0;
+    array<array<string, 4>, 4> KEY_MATRIX;
 
     for (int i = 0; i < 4; i++)
     {
-        array<array<string, 4>, 4> KEY_MATRIX;
-
         for (int j = 0; j < 4; j++)
         {
             if (index < key.length())
@@ -78,7 +95,8 @@ void InitialRoundKey()
                 int ascii_value = static_cast<int>(key_char);
 
                 string binary_string_8bit = bitset<8>(ascii_value).to_string();
-                KEY_MATRIX[j][i] = binary_string_8bit; // binary of key char stored column-wise                
+                KEY_MATRIX[j][i] = binary_string_8bit; // binary of key char stored column-wise
+                // cout << " | " << KEY_MATRIX[j][i];  
             }
             else
             {
@@ -86,15 +104,16 @@ void InitialRoundKey()
                 return;
             }
         }
-        KEY_POOL.push_back(KEY_MATRIX);
+        // cout << " |" << endl;
     }
+    KEY_POOL.push_back(KEY_MATRIX);
 }
 
 void expandKey()
 {
     // create word array and w'
 
-    for (int k = 1; k < 11; k++) // 11 round keys for 128-bit
+    for (int k = 1; k < 11; k++) // 11 round keys for 128-bit | 10 here since InitialRoundKey() generates first one
     {
         array<string, 4> WORD_ARRAY;
         array<string, 4> WORD_ARRAY_OUTPUT;
@@ -109,29 +128,43 @@ void expandKey()
                 word += KEY_POOL[k - 1][j][i];
             }
             WORD_ARRAY[i] = word;
+            // cout << "Word: " << k << " : "<< word << endl;
         }
-        string w_dash = gFunction(WORD_ARRAY[4], k); // w' calculated using the last word
+        string w_dash = gFunction(WORD_ARRAY[3], k); // w' calculated using the last word
+
+        // cout << "w_dash: " << w_dash << endl;
 
         // generate new word array
 
         for (int i = 0; i < 4; i++)
         {
-            if (i = 0)
+            if (i == 0)
             {
-                int first_value = stoi(WORD_ARRAY[i], nullptr, 2);
-                int w_dash_int =  stoi(w_dash, nullptr, 2); // for first word, use w' as second value
+                // cout << "word array: " << WORD_ARRAY[i] << endl;
+                
+                // long long int first_value = stoll(WORD_ARRAY[i], nullptr, 2);
+                // long long int w_dash_int =  stoll(w_dash, nullptr, 2); // for first word, use w' as second value
+                // int xor_result = first_value ^ w_dash_int;
+                // cout << "first: " << first_value << " w_dash: " << w_dash << " xor: " << xor_result << endl;
+                // WORD_ARRAY_OUTPUT[i] = bitset<32>(xor_result).to_string();
 
-                int xor_result = first_value ^ w_dash_int;
-                WORD_ARRAY_OUTPUT[i] = bitset<8>(xor_result).to_string();
+                string xor_result = binaryXOR(WORD_ARRAY[i], w_dash);
+                WORD_ARRAY_OUTPUT[i] = xor_result;
+
+                // cout << "binary: " << WORD_ARRAY_OUTPUT[i] << endl;
 
             }
             else
             {
-                int first_value = stoi(WORD_ARRAY[i], nullptr, 2);
-                int second_value =  stoi(WORD_ARRAY_OUTPUT[i-1], nullptr, 2); // use previous new word as second value
+                // cout << "else hit " << k << endl;
 
-                int xor_result = first_value ^ second_value;
-                WORD_ARRAY_OUTPUT[i] = bitset<8>(xor_result).to_string();
+                // long int first_value = stoll(WORD_ARRAY[i], nullptr, 2);
+                // long int second_value =  stoll(WORD_ARRAY_OUTPUT[i-1], nullptr, 2); // use previous new word as second value
+                // int xor_result = first_value ^ second_value;
+                // WORD_ARRAY_OUTPUT[i] = bitset<32>(xor_result).to_string();
+
+                string xor_result = binaryXOR(WORD_ARRAY[i], WORD_ARRAY_OUTPUT[i-1]);
+                WORD_ARRAY_OUTPUT[i] = xor_result;
             }
         }
         // convert word array into 4x4 byte matrix to append into KEY POOL
@@ -158,13 +191,17 @@ string gFunction(string word, int round)
     for (int i=0; i < 4; i++)
     {
         BYTE_ARRAY[i] =  word.substr(i * 8, 8);
+        // cout << i << " byte array: " << BYTE_ARRAY[i] << endl;
     }
 
     // 1) One byte circular left shift
 
     for (int i = 0; i < 4; i++)
     {
-        BYTE_ARRAY_SHIFT[i] = BYTE_ARRAY[(i - 1) % 4];
+        int index = (i + 1) % 4;
+        // cout << "index: " << index << endl;
+        BYTE_ARRAY_SHIFT[i] = BYTE_ARRAY[(i + 1) % 4];
+        // cout << "shift: " << BYTE_ARRAY_SHIFT[i] << endl;
     }
 
     // 2) S_BOX substitution
@@ -178,6 +215,7 @@ string gFunction(string word, int round)
         int col_index = stoi(last_4_bits, nullptr, 2);
 
         int decimal_value = stoi(S_BOX[row_index][col_index], nullptr, 16); // hex to decimal
+        // cout << decimal_value << endl;
         BYTE_ARRAY_SUB[i] = bitset<8>(decimal_value).to_string(); // decimal to binary
     }
 
@@ -185,17 +223,22 @@ string gFunction(string word, int round)
 
     for (int i = 0; i < 4; i++)
     {
-        int sub_word = stoi(BYTE_ARRAY_SUB[i], nullptr, 2);
-        int round_const = stoi(ROUND_CONSTANT[round], nullptr, 16); // round constant originally in hex base 16
+        // cout << "sdasda" << endl;
+        // int sub_word = stoi(BYTE_ARRAY_SUB[i], nullptr, 2);
+        // int round_const = stoi(ROUND_CONSTANT[round], nullptr, 16); // round constant originally in hex base 16
 
-        int xor_result = sub_word ^ round_const; // xor 8-bit sections of the word with round constant
-        w_dash += bitset<32>(xor_result).to_string(); // append the xored bits in binary to w_dash
+        // int xor_result = sub_word ^ round_const; // xor 8-bit sections of the word with round constant
+        // w_dash += bitset<8>(xor_result).to_string(); // append the xored bits in binary to w_dash
+
+        // cout << "byte sub "<< BYTE_ARRAY_SUB[i] << endl;
+
+        string xor_result = binaryXOR(BYTE_ARRAY_SUB[i], ROUND_CONSTANT[round - 1]);
+        w_dash += xor_result;
     }
     return w_dash;
 }
 
 };
-
 
 class Encryption
 {
@@ -210,6 +253,8 @@ string STATE_ARRAY_SUB_BYTES[4][4];
 string STATE_ARRAY_SHIFT_ROWS[4][4];
 string STATE_ARRAY_MIX_COLUMN[4][4];
 
+vector<array<array<string, 4>, 4>> ADD_ROUND_KEY_OUTPUT;
+
 Encryption() {}
 
 Encryption(string ip_str)
@@ -220,7 +265,9 @@ Encryption(string ip_str)
 void createPlainMatrix()
 {
     cout << "--------- PLAIN TEXT ---------" << endl;
+    
     int index = 0;
+    array<array<string, 4>, 4> INITIAL_ROUND_KEY = KEY_POOL[0];
 
     for (int i = 0; i < 4; i++)
     {
@@ -235,24 +282,35 @@ void createPlainMatrix()
 
                 // convert binary into integer
                 int int_value = stoi(binary_string_8bit, nullptr, 2);
-                PT_MATRIX_INT[j][i] = int_value; // input stored column-wise in AES / Block Ciphers
+
+                // XORing plain text with Initial Round Key
+                string round_key_binary = INITIAL_ROUND_KEY[j][i];
+                // cout << "round key: " << round_key_binary << endl;
+                int round_key_decimal = stoi(round_key_binary, nullptr, 2);
+
+                int result = int_value ^ round_key_decimal;
+                // cout << "round key xor: " << result << endl;
+
+                PT_MATRIX_INT[j][i] = result; // input stored column-wise in AES / Block Ciphers
 
                 // Convert integer to hexadecimal string
                 stringstream ss;
-                ss << hex << int_value; // set hex as format for string stream before inserting
+                ss << hex << result; // set hex as format for string stream before inserting
                 string hex_string = ss.str(); //extract contents from stream as string
                 
                 PT_MATRIX_HEX[j][i] = hex_string;
             }
             else
             {
-                cout << "Adding Padding Bits" << endl;
+                // cout << "Adding Padding Bits" << endl;
+
                 // PKCS#7 Padding => amount of bytes needed for padding are added as padding
                 int padding_value = 16 - input_string.length();
-                PT_MATRIX_INT[j][i] = padding_value;
+                int round_key_xor = padding_value ^ stoi(INITIAL_ROUND_KEY[j][i], nullptr, 2);
+                PT_MATRIX_INT[j][i] = round_key_xor;
 
                 stringstream pv;
-                pv << hex << padding_value;
+                pv << hex << round_key_xor;
                 string padding_value_hex = pv.str();
                 PT_MATRIX_HEX[j][i] = padding_value_hex;
             }
@@ -263,13 +321,20 @@ void createPlainMatrix()
     {
         for (int j=0; j<4; j++)
         {
-            cout << " | " << PT_MATRIX_HEX[i][j];
+            if (PT_MATRIX_HEX[i][j].length() > 1)
+            {
+                cout << " | " << PT_MATRIX_HEX[i][j];
+            }
+            else
+            {
+                cout << " |  " << PT_MATRIX_HEX[i][j];
+            }
         }
         cout << " |" << endl;
     }
 }
 
-void subBytes()
+void subBytes(int round)
 {
     cout << "--------- SUB BYTES ---------" << endl;
 
@@ -277,7 +342,17 @@ void subBytes()
     {
         for (int j=0; j < 4; j++)
         {
-            string plain_char_hex = PT_MATRIX_HEX[i][j];
+            string plain_char_hex;
+
+            if (round == 0)
+            {
+                plain_char_hex = PT_MATRIX_HEX[i][j]; // use plain-text matrix
+            }
+            else
+            {
+                plain_char_hex = ADD_ROUND_KEY_OUTPUT[round-1][i][j]; // use output from previous rounds if round > 0
+            }
+
             string first_char(1, plain_char_hex[0]);
             string second_char(1, plain_char_hex[1]);
 
@@ -355,27 +430,79 @@ void mixColumn()
 
             STATE_ARRAY_MIX_COLUMN[i][j] = hex_xor;
             
-            cout << " | " << STATE_ARRAY_MIX_COLUMN[i][j];
+            // print formatting
+            if (STATE_ARRAY_MIX_COLUMN[i][j].length() > 1)
+            {
+                cout << " | " << STATE_ARRAY_MIX_COLUMN[i][j];
+            }
+            else
+            {
+                cout << " |  " << STATE_ARRAY_MIX_COLUMN[i][j];
+            }
         }
         cout << " |" << endl;
     }
 }
 
-};
+void addRoundKey(int round)
+{
+    cout << "--------- ROUND KEY ---------" << endl;
 
+    array<array<string, 4>, 4> ROUND_KEY_MATRIX = KEY_POOL[round + 1]; // + 1 since 0th index is initial round key already used
+    array<array<string, 4>, 4> OUTPUT;
+
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            // int round_key_decimal = stoi(ROUND_KEY_MATRIX[j][i], nullptr, 2);
+            int mix_column_decimal = stoi(STATE_ARRAY_MIX_COLUMN[j][i], nullptr, 16);
+            // int xor_result = mix_column_decimal ^ round_key_decimal;
+
+            string mix_col_binary = bitset<8>(mix_column_decimal).to_string();
+
+            // cout << "mix col: " << STATE_ARRAY_MIX_COLUMN[j][i] << " round key: " << ROUND_KEY_MATRIX[j][i] << endl;
+            string xor_result = binaryXOR(mix_col_binary, ROUND_KEY_MATRIX[j][i]);
+            // cout << "xor binary: " << xor_result << endl;
+            unsigned long long int xor_decimal = stoull(xor_result, nullptr, 2);
+            // cout << "xor Dec: " << xor_decimal << endl;
+
+            stringstream ss;
+            ss << hex << xor_decimal;
+            string hex_string = ss.str();
+
+            OUTPUT[i][j] = hex_string;
+            
+            if (OUTPUT[i][j].length() > 1)
+            {
+                cout << " | " << OUTPUT[i][j];
+            }
+            else
+            {
+                cout << " |  " << OUTPUT[i][j];
+            }
+        }
+        cout << " |" << endl;
+    }
+    ADD_ROUND_KEY_OUTPUT.push_back(OUTPUT);
+}
+
+};
 
 class AES
 {
 public: 
 
+string key;
 string input_text;
 vector <string> INPUT_16_BYTES_ARRAY;
 
 AES() {}
 
-AES(string text)
+AES(string input, string k)
 {
-    this->input_text = text;
+    this->input_text = input;
+    this->key = k;
 }
 
 void makeInputPackets()
@@ -403,24 +530,34 @@ void algorithm()
 {
     makeInputPackets();
 
+    KeyExpansion Key(key);
+    Key.InitialRoundKey();
+    Key.expandKey();
+
     for (int i = 0; i < INPUT_16_BYTES_ARRAY.size(); i++)
     {
-        cout << "\n16 byte input: " << INPUT_16_BYTES_ARRAY[i] << endl;
-
+        cout << "\n16 byte input: " << INPUT_16_BYTES_ARRAY[i] << "\n" << endl;
+        
         Encryption Encrypt(INPUT_16_BYTES_ARRAY[i]);
-        Encrypt.createPlainMatrix();
-        Encrypt.subBytes();
-        Encrypt.shiftRows();
-        Encrypt.mixColumn();
+
+        for (int round = 0; round < 2; round++)
+        {
+            cout << "\n******** ROUND # " << round+1 << " ********\n" << endl;
+
+            Encrypt.createPlainMatrix();
+            Encrypt.subBytes(round);
+            Encrypt.shiftRows();
+            Encrypt.mixColumn();
+            Encrypt.addRoundKey(round);
+        }
     }
 }
 
 };
 
-
 int main()
 {
-    AES Cipher("muhammadhabibkhamuhammad");
+    AES Cipher("muhammadhabibkhamuhammad", "qwertyuiopasdfgh");
     Cipher.algorithm();
 
     return 0;
