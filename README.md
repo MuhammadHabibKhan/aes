@@ -15,6 +15,7 @@ Implementation of AES 128 Bit Encryption, Decryption and Key Expansion Algorithm
 - The functions createPlainMatrix in Encryption and createCipherMatrix in Decryption class outputs the matrix after being XORed with the initial round key.
 - The initial round key for the first one is W(0-3) and W(40-43) for the latter.
 - A seperate function for the add round key step for the last round in Encryption is unnecessary as similar functionality can be acheived with a condition (will remove later)
+
 ![image](https://github.com/MuhammadHabibKhan/aes/assets/92048010/f962b6a9-3163-481d-9434-68e254977267)
 
 ### AES Class
