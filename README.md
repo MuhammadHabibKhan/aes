@@ -8,6 +8,7 @@ Implementation of AES 128 Bit Encryption, Decryption and Key Expansion Algorithm
 - Round keys are generated and stored globally in a vector instead of being scheduled
 - Encryption & Decryption class utilizes them in ascending and descending order respectively
 
+
 &nbsp; ![image](https://github.com/MuhammadHabibKhan/aes/assets/92048010/bcdb9d1e-979f-4dbb-a0e4-b3054c038c0a)
 
 
@@ -16,7 +17,9 @@ Implementation of AES 128 Bit Encryption, Decryption and Key Expansion Algorithm
 - These steps are as depicted in the image below
 - Output of plain and cipher text matrix displayed after XOR operation with initial round key
 
-![image](https://github.com/MuhammadHabibKhan/aes/assets/92048010/f962b6a9-3163-481d-9434-68e254977267)
+
+<!--- ![image](https://github.com/MuhammadHabibKhan/aes/assets/92048010/f962b6a9-3163-481d-9434-68e254977267)  -->
+![image](https://github.com/MuhammadHabibKhan/aes/assets/92048010/c4cceeb5-82dc-4d16-86de-44aefc818ee8)
 
 
 ### AES Class
