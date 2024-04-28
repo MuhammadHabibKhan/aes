@@ -5,8 +5,6 @@
 #include <sstream>
 #include <array>
 
-// #include "Galois/galois.h"
-
 using namespace std;
 
 vector<array<array<string, 4>, 4>> KEY_POOL; // in binary
